@@ -12,7 +12,6 @@ RUN go build
 FROM docker.01-edu.org/caddy:2.3.0-alpine
 
 RUN apk add --no-cache curl tzdata
-RUN apk add --no-cache iproute2
 
 ENTRYPOINT ["/app/main"]
 

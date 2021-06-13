@@ -31,7 +31,10 @@ func load(path, config string) {
 	req.Header.Set("content-type", "application/json")
 	resp, err := httpClient.Do(req)
 	expect(nil, err)
-	expect(nil, resp.Body.Close())
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		panic(resp.Status + " " + path + " " + config)
+	}
 }
 
 func readFile(name string) string {
@@ -65,6 +68,9 @@ func setCaddyProxy(domain, container string) {
 	files, err := os.ReadDir(".")
 	expect(nil, err)
 	for _, file := range files {
+		if file.Name() == "base.json" {
+			continue
+		}
 		config := readFile(file.Name())
 		config = strings.ReplaceAll(config, "{{DOMAIN}}", domain)
 		config = strings.ReplaceAll(config, "{{CONTAINER}}", container)

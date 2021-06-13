@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -41,25 +40,18 @@ func readFile(name string) string {
 }
 
 func setCaddyProxy(domain, container string) {
-	loadConfig := func(filename string) {
-		config := readFile("config/" + filename)
+	t := time.Now()
+	files, err := os.ReadDir("config")
+	expect(nil, err)
+	for _, file := range files {
+		config := readFile("config/" + file.Name())
 		config = strings.ReplaceAll(config, "{{DOMAIN}}", domain)
 		config = strings.ReplaceAll(config, "{{CONTAINER}}", container)
-		path := strings.TrimSuffix(filename, ".json")
+		path := strings.TrimSuffix(file.Name(), ".json")
 		path = strings.SplitN(path, "-", 2)[0]
 		path = strings.ReplaceAll(path, ".", "/")
 		load(path, config)
 	}
-	t := time.Now()
-	ips, err := net.LookupIP(domain)
-	expect(nil, err)
-	if ips[0].IsLoopback() {
-		loadConfig("apps.http.servers.srv0.tls_connection_policies-app.json")
-		loadConfig("apps.http.servers.srv0.tls_connection_policies-gitea.json")
-		loadConfig("apps.tls.certificates.load_files.json")
-	}
-	loadConfig("apps.http.servers.srv0.routes-app.json")
-	loadConfig("apps.http.servers.srv0.routes-gitea.json")
 	fmt.Println(domain, "=>", container, "in", time.Since(t))
 }
 

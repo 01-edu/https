@@ -1,0 +1,12 @@
+{
+  "certificate_selection": {
+    "any_tag": [
+      "{{DOMAIN}}"
+    ]
+  },
+  "match": {
+    "sni": [
+      "{{DOMAIN}}"
+    ]
+  }
+}

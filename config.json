@@ -1,0 +1,20 @@
+{
+  "apps": {
+    "http": {
+      "servers": {
+        "srv0": {
+          "listen": [
+            ":443"
+          ],
+          "routes": [],
+          "tls_connection_policies": []
+        }
+      }
+    },
+    "tls": {
+      "certificates": {
+        "load_files": []
+      }
+    }
+  }
+}

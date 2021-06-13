@@ -1,0 +1,46 @@
+{
+  "handle": [
+    {
+      "handler": "subroute",
+      "routes": [
+        {
+          "handle": [
+            {
+              "handler": "headers",
+              "response": {
+                "set": {
+                  "Strict-Transport-Security": [
+                    "max-age=31536000;"
+                  ]
+                }
+              }
+            },
+            {
+              "encodings": {
+                "gzip": {},
+                "zstd": {}
+              },
+              "handler": "encode"
+            },
+            {
+              "handler": "reverse_proxy",
+              "upstreams": [
+                {
+                  "dial": "{{CONTAINER}}:8080"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "match": [
+    {
+      "host": [
+        "{{DOMAIN}}"
+      ]
+    }
+  ],
+  "terminal": true
+}

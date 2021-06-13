@@ -1,0 +1,14 @@
+{
+  "apps": {
+    "http": {
+      "servers": {
+        "srv0": {
+          "listen": [
+            ":443"
+          ],
+          "routes": []
+        }
+      }
+    }
+  }
+}

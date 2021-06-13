@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -39,12 +40,25 @@ func readFile(name string) string {
 	return string(b)
 }
 
+var initialized bool
+
 func setCaddyProxy(domain, container string) {
+	if !initialized {
+		initialized = true
+		ips, err := net.LookupIP(domain)
+		expect(nil, err)
+		if ips[0].IsLoopback() {
+			expect(nil, os.Chdir("development"))
+		} else {
+			expect(nil, os.Chdir("production"))
+		}
+		load("", readFile("base.json"))
+	}
 	t := time.Now()
-	files, err := os.ReadDir("config")
+	files, err := os.ReadDir(".")
 	expect(nil, err)
 	for _, file := range files {
-		config := readFile("config/" + file.Name())
+		config := readFile(file.Name())
 		config = strings.ReplaceAll(config, "{{DOMAIN}}", domain)
 		config = strings.ReplaceAll(config, "{{CONTAINER}}", container)
 		path := strings.TrimSuffix(file.Name(), ".json")
@@ -59,7 +73,6 @@ func main() {
 	cli, err := client.NewClientWithOpts(client.WithAPIVersionNegotiation())
 	expect(nil, err)
 	expect(nil, exec.Command("caddy", "start").Run())
-	load("", readFile("config.json"))
 	ctx := context.Background()
 	eventCh, errCh := cli.Events(ctx, types.EventsOptions{
 		Filters: filters.NewArgs(

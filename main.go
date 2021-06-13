@@ -40,7 +40,10 @@ func readFile(name string) string {
 	return string(b)
 }
 
-var initialized bool
+var (
+	initialized bool
+	alreadySet  = map[string]struct{}{}
+)
 
 func setCaddyProxy(domain, container string) {
 	if !initialized {
@@ -54,6 +57,10 @@ func setCaddyProxy(domain, container string) {
 		}
 		load("", readFile("base.json"))
 	}
+	if _, ok := alreadySet[domain]; ok {
+		return
+	}
+	alreadySet[domain] = struct{}{}
 	t := time.Now()
 	files, err := os.ReadDir(".")
 	expect(nil, err)

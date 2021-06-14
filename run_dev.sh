@@ -15,6 +15,8 @@ mkcert \
 
 docker build -t docker.01-edu.org/https .
 docker container rm --force https 2>/dev/null
+docker volume rm caddy_config 2>/dev/null ||:
+docker volume rm caddy_data 2>/dev/null ||:
 docker run \
     --detach \
     --name https \

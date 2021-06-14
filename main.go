@@ -35,6 +35,7 @@ func load(path, config string) {
 	if resp.StatusCode != http.StatusOK {
 		panic(resp.Status + " " + path + " " + config)
 	}
+	time.Sleep(10 * time.Millisecond)
 }
 
 func readFile(name string) string {

@@ -36,6 +36,7 @@ var (
 	httpClient = http.Client{Timeout: 15 * time.Second}
 )
 
+// setCaddyProxy requests caddy to proxy the domain to the container
 func setCaddyProxy(domain, container string) {
 	// Don't proxy a domain name twice
 	if _, ok := alreadySet[domain]; ok {

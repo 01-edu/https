@@ -114,7 +114,9 @@ func main() {
 	})
 	expect(nil, err)
 	for _, container := range containers {
-		setCaddyProxy(container.Labels["org.01-edu.domain"], container.Names[0][1:])
+		domain := container.Labels["org.01-edu.domain"]
+		container := container.Names[0][1:] // remove leading '/'
+		setCaddyProxy(domain, container)
 	}
 
 	// Proxy incoming services
@@ -123,7 +125,9 @@ func main() {
 		case err := <-errCh:
 			expect(nil, err)
 		case event := <-eventCh:
-			setCaddyProxy(event.Actor.Attributes["org.01-edu.domain"], event.Actor.Attributes["name"])
+			domain := event.Actor.Attributes["org.01-edu.domain"]
+			container := event.Actor.Attributes["name"]
+			setCaddyProxy(domain, container)
 		}
 	}
 }

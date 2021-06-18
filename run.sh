@@ -15,19 +15,19 @@ if test "$(dig +short "$DOMAIN")" = "127.0.0.1"; then
         "git.${DOMAIN}"
 fi
 
-docker build -t docker.01-edu.org/https .
+docker build -t https .
 docker container rm --force https 2>/dev/null
-docker volume rm caddy_config 2>/dev/null ||:
-docker volume rm caddy_data 2>/dev/null ||:
-docker network create endpoint 2>/dev/null ||:
+docker volume rm https_config 2>/dev/null ||:
+docker volume rm https_data 2>/dev/null ||:
+docker network create https 2>/dev/null ||:
 docker run \
     --detach \
     --name https \
-    --network endpoint \
+    --network https \
     --restart unless-stopped \
     --volume /var/run/docker.sock:/var/run/docker.sock:ro \
-    --volume caddy_config:/config \
-    --volume caddy_data:/data \
+    --volume https_config:/config \
+    --volume https_data:/data \
     --publish 80:80 \
     --publish 443:443 \
-    docker.01-edu.org/https
+    https

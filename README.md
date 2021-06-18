@@ -1,23 +1,14 @@
 # HTTPS
 
-## Build
+## Requirements
+
+- Docker
+- mkcert (development machine)
+
+## Usage
 
 ```
-docker build -t docker.01-edu.org/https .
+./run.sh [DOMAIN]
 ```
 
-## Run
-
-```
-docker run \
-    --detach \
-    --name https \
-    --network endpoint \
-    --restart unless-stopped \
-    --volume /var/run/docker.sock:/var/run/docker.sock:ro \
-    --volume caddy_config:/config \
-    --volume caddy_data:/data \
-    --publish 80:80 \
-    --publish 443:443 \
-    docker.01-edu.org/https
-```
+The default `DOMAIN` is dev.01-edu.org.

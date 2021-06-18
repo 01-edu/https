@@ -7,11 +7,13 @@ cd -P "$(dirname "$0")"
 
 DOMAIN=${1:-dev.01-edu.org}
 
-mkcert \
-    -cert-file="${DOMAIN}-cert.pem" \
-    -key-file="${DOMAIN}-key.pem" \
-    "${DOMAIN}" \
-    "git.${DOMAIN}"
+if test "$(dig +short "$DOMAIN")" = "127.0.0.1"; then
+    mkcert \
+        -cert-file="${DOMAIN}-cert.pem" \
+        -key-file="${DOMAIN}-key.pem" \
+        "${DOMAIN}" \
+        "git.${DOMAIN}"
+fi
 
 docker build -t docker.01-edu.org/https .
 docker container rm --force https 2>/dev/null

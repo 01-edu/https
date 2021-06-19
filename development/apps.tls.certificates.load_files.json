@@ -1,7 +1,0 @@
-{
-  "certificate": "{{DOMAIN}}-cert.pem",
-  "key": "{{DOMAIN}}-key.pem",
-  "tags": [
-    "{{DOMAIN}}"
-  ]
-}

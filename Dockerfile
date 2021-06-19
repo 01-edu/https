@@ -16,6 +16,5 @@ RUN apk add --no-cache curl tzdata
 ENTRYPOINT ["/app/main"]
 
 COPY *.pem ./
-COPY development development
-COPY production production
+COPY development.tmpl production.tmpl ./
 COPY --from=builder /app/main /app/main

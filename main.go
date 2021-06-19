@@ -5,12 +5,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
-	"os"
 	"os/exec"
+	"sort"
 	"strings"
 	"sync"
+	"text/template"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -24,69 +26,79 @@ func expect(target, err error) {
 	}
 }
 
-func readFile(name string) string {
-	b, err := os.ReadFile(name)
-	expect(nil, err)
-	return string(b)
-}
-
 var (
 	once       sync.Once
-	alreadySet = map[string]struct{}{}
+	tmpl       *template.Template
 	httpClient = http.Client{Timeout: 15 * time.Second}
+	proxies    = map[string]string{}
 )
 
-// setCaddyProxy requests caddy to proxy the domain to the container
-func setCaddyProxy(domain, container string) {
-	// Don't proxy a domain name twice
-	if _, ok := alreadySet[domain]; ok {
-		return
-	}
-	alreadySet[domain] = struct{}{}
-
-	// Apply the JSON config in caddy at the path specified
-	setCaddyConfig := func(path, config string) {
-		req, err := http.NewRequest("POST", "http://localhost:2019/config/"+path, bytes.NewBufferString(config))
-		expect(nil, err)
-		req.Header.Set("content-type", "application/json")
-		resp, err := httpClient.Do(req)
-		expect(nil, err)
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			panic(resp.Status + " " + path + " " + config)
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-
-	// Determine if this a development or production machine by looking at the first domain name to be proxied
-	once.Do(func() {
-		ips, err := net.LookupIP(domain)
-		expect(nil, err)
-		if ips[0].IsLoopback() {
-			expect(nil, os.Chdir("development"))
-		} else {
-			expect(nil, os.Chdir("production"))
-		}
-		setCaddyConfig("", readFile("base.json"))
-	})
-
-	// Apply all config files
-	t := time.Now()
-	files, err := os.ReadDir(".")
-	expect(nil, err)
-	for _, file := range files {
-		if file.Name() == "base.json" {
+func parseEntries(container, https string, up bool) {
+	entries := strings.Split(https, ",")
+	for _, entry := range entries {
+		parts := strings.Split(entry, ":")
+		if len(parts) != 2 {
+			fmt.Println("invalid entry", entry)
 			continue
 		}
-		config := readFile(file.Name())
-		config = strings.ReplaceAll(config, "{{DOMAIN}}", domain)
-		config = strings.ReplaceAll(config, "{{CONTAINER}}", container)
-		path := strings.TrimSuffix(file.Name(), ".json")
-		path = strings.SplitN(path, "-", 2)[0] // Ignore the text after "-" (included)
-		path = strings.ReplaceAll(path, ".", "/")
-		setCaddyConfig(path, config)
+		domain, port := parts[0], parts[1]
+		if up {
+			proxies[domain] = container + ":" + port
+		} else {
+			delete(proxies, domain)
+		}
 	}
-	fmt.Println(domain, "=>", container, "in", time.Since(t))
+}
+
+// setCaddyProxies requests Caddy to proxy the domains to the containers
+func setCaddyProxies() {
+	t := time.Now()
+	defer func() {
+		fmt.Println("config loaded in", time.Since(t))
+	}()
+
+	// Determine if this a development or production domain by looking at the first domain to be proxied
+	// Parse the right configuration template file
+	once.Do(func() {
+		for domain := range proxies {
+			ips, err := net.LookupIP(domain)
+			expect(nil, err)
+			var config string
+			if ips[0].IsLoopback() {
+				config = "development.tmpl"
+			} else {
+				config = "production.tmpl"
+			}
+			tmpl, err = template.ParseFiles(config)
+			expect(nil, err)
+		}
+	})
+
+	// Prepare data for the template
+	var domains []string
+	for domain := range proxies {
+		domains = append(domains, domain)
+	}
+	sort.Strings(domains)
+	var data []struct{ Domain, Container string }
+	for _, domain := range domains {
+		data = append(data, struct{ Domain, Container string }{domain, proxies[domain]})
+	}
+
+	// Apply the template to the data and load the resulting JSON config in Caddy
+	var buf bytes.Buffer
+	expect(nil, tmpl.Execute(&buf, data))
+	req, err := http.NewRequest("POST", "http://localhost:2019/load", &buf)
+	expect(nil, err)
+	req.Header.Set("content-type", "application/json")
+	resp, err := httpClient.Do(req)
+	expect(nil, err)
+	defer resp.Body.Close()
+	b, err := ioutil.ReadAll(resp.Body)
+	expect(nil, err)
+	if resp.StatusCode != http.StatusOK {
+		panic(resp.Status + " " + string(b))
+	}
 }
 
 func main() {
@@ -94,30 +106,31 @@ func main() {
 	expect(nil, err)
 	expect(nil, exec.Command("caddy", "start").Run())
 
-	// Connect to Docker events in order to detect new caddy services
+	// Connect to Docker events in order to detect new Caddy services
 	ctx := context.Background()
 	eventCh, errCh := cli.Events(ctx, types.EventsOptions{
 		Filters: filters.NewArgs(
-			filters.Arg("label", "com.docker.compose.service=caddy"),
-			filters.Arg("label", "org.01-edu.domain"),
+			filters.Arg("label", "org.01-edu.https"),
 			filters.Arg("type", "container"),
 			filters.Arg("event", "start"),
+			filters.Arg("event", "die"),
+			filters.Arg("event", "oom"),
 		),
 	})
 
 	// Connection is established, proxy already existing services before proxying new ones
 	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{
 		Filters: filters.NewArgs(
-			filters.Arg("label", "com.docker.compose.service=caddy"),
-			filters.Arg("label", "org.01-edu.domain"),
+			filters.Arg("label", "org.01-edu.https"),
 		),
 	})
 	expect(nil, err)
 	for _, container := range containers {
-		domain := container.Labels["org.01-edu.domain"]
-		container := container.Names[0][1:] // remove leading '/'
-		setCaddyProxy(domain, container)
+		containerName := container.Names[0][1:] // remove leading '/'
+		https := container.Labels["org.01-edu.https"]
+		parseEntries(containerName, https, true)
 	}
+	setCaddyProxies()
 
 	// Proxy incoming services
 	for {
@@ -125,9 +138,11 @@ func main() {
 		case err := <-errCh:
 			expect(nil, err)
 		case event := <-eventCh:
-			domain := event.Actor.Attributes["org.01-edu.domain"]
-			container := event.Actor.Attributes["name"]
-			setCaddyProxy(domain, container)
+			containerName := event.Actor.Attributes["name"]
+			https := event.Actor.Attributes["org.01-edu.https"]
+			up := event.Status == "start"
+			parseEntries(containerName, https, up)
+			setCaddyProxies()
 		}
 	}
 }

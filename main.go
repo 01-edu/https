@@ -62,6 +62,9 @@ func setCaddyProxies() {
 	t := time.Now()
 	defer func() {
 		fmt.Println("config loaded in", time.Since(t))
+		for domain, container := range proxies {
+			fmt.Println(" ", domain, "=>", container)
+		}
 	}()
 
 	// Determine if this a development or production domain by looking at the first domain to be proxied

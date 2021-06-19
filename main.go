@@ -33,6 +33,7 @@ var (
 	proxies    = map[string]string{}
 )
 
+// parseEntries parses Docker label "org.01-edu.https" and set proxies accordingly
 func parseEntries(container, https string, up bool) {
 	entries := strings.Split(https, ",")
 	for _, entry := range entries {

@@ -25,12 +25,13 @@ func expect(target, err error) {
 	}
 }
 
-var (
-	initialized bool
-	tmpl        *template.Template
-	httpClient  = http.Client{Timeout: 15 * time.Second}
-	proxies     = map[string]string{}
-)
+// {
+//         "dev.01-edu.org": "all_caddy_1:8080",
+//     "git.dev.01-edu.org": "all_caddy_1:8081",
+//        "test.01-edu.org": "test01-eduorg_caddy_1:8080",
+//    "git.test.01-edu.org": "test01-eduorg_caddy_1:8081",
+// }
+var proxies = map[string]string{}
 
 // parseEntries parses Docker label "org.01-edu.https" and set proxies accordingly
 func parseEntries(container, https string, up bool) {
@@ -49,6 +50,12 @@ func parseEntries(container, https string, up bool) {
 		}
 	}
 }
+
+var (
+	initialized bool
+	tmpl        *template.Template
+	httpClient  = http.Client{Timeout: 15 * time.Second}
+)
 
 // setCaddyProxies requests Caddy to proxy the domains to the containers
 func setCaddyProxies() {

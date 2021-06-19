@@ -72,6 +72,7 @@ func setCaddyProxies() {
 			}
 			tmpl, err = template.ParseFiles(config)
 			expect(nil, err)
+			return
 		}
 	})
 

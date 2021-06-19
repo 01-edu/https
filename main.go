@@ -129,7 +129,8 @@ func main() {
 	for _, container := range containers {
 		containerName := container.Names[0][1:] // remove leading '/'
 		https := container.Labels["org.01-edu.https"]
-		parseEntries(containerName, https, true)
+		up := true // only running containers are listed
+		parseEntries(containerName, https, up)
 	}
 	setCaddyProxies()
 

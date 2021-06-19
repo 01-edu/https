@@ -53,6 +53,10 @@ func parseEntries(container, https string, up bool) {
 
 // setCaddyProxies requests Caddy to proxy the domains to the containers
 func setCaddyProxies() {
+	if len(proxies) == 0 {
+		return
+	}
+
 	t := time.Now()
 	defer func() {
 		fmt.Println("config loaded in", time.Since(t))

@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
-	"sync"
 	"text/template"
 	"time"
 
@@ -27,10 +26,10 @@ func expect(target, err error) {
 }
 
 var (
-	once       sync.Once
-	tmpl       *template.Template
-	httpClient = http.Client{Timeout: 15 * time.Second}
-	proxies    = map[string]string{}
+	initialized bool
+	tmpl        *template.Template
+	httpClient  = http.Client{Timeout: 15 * time.Second}
+	proxies     = map[string]string{}
 )
 
 // parseEntries parses Docker label "org.01-edu.https" and set proxies accordingly
@@ -53,10 +52,6 @@ func parseEntries(container, https string, up bool) {
 
 // setCaddyProxies requests Caddy to proxy the domains to the containers
 func setCaddyProxies() {
-	if len(proxies) == 0 {
-		return
-	}
-
 	t := time.Now()
 	defer func() {
 		fmt.Println("config loaded in", time.Since(t))
@@ -64,7 +59,11 @@ func setCaddyProxies() {
 
 	// Determine if this a development or production domain by looking at the first domain to be proxied
 	// Parse the right configuration template file
-	once.Do(func() {
+	if !initialized {
+		if len(proxies) == 0 {
+			return
+		}
+		initialized = true
 		for domain := range proxies {
 			ips, err := net.LookupIP(domain)
 			expect(nil, err)
@@ -76,9 +75,9 @@ func setCaddyProxies() {
 			}
 			tmpl, err = template.ParseFiles(config)
 			expect(nil, err)
-			return
+			break
 		}
-	})
+	}
 
 	// Prepare data for the template
 	var domains []string

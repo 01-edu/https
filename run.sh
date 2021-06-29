@@ -5,7 +5,7 @@ IFS='
 '
 cd -P "$(dirname "$0")"
 
-DOMAIN=${1:-dev.01-edu.org}
+DOMAIN=${DOMAIN:-dev.01-edu.org}
 
 if test "$(dig +short "$DOMAIN")" = "127.0.0.1"; then
     mkcert -cert-file     "${DOMAIN}-cert.pem" -key-file     "${DOMAIN}-key.pem"     "${DOMAIN}"

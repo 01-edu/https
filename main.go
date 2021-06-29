@@ -67,26 +67,29 @@ func setCaddyProxies() {
 		}
 	}()
 
-	// Determine if this a development or production domain by looking at the first domain to be proxied
+	// Determine if this a development or production domain by looking at the first domains to be proxied
 	// Parse the right configuration template file
 	if !initialized {
 		if len(proxies) == 0 {
 			return
 		}
 		initialized = true
+		var development bool
 		for domain := range proxies {
 			ips, err := net.LookupIP(domain)
 			expect(nil, err)
-			var config string
 			if ips[0].IsLoopback() {
-				config = "development.tmpl"
-			} else {
-				config = "production.tmpl"
+				development = true
+				break
 			}
-			tmpl, err = template.ParseFiles(config)
-			expect(nil, err)
-			break
 		}
+		var err error
+		if development {
+			tmpl, err = template.ParseFiles("development.tmpl")
+		} else {
+			tmpl, err = template.ParseFiles("production.tmpl")
+		}
+		expect(nil, err)
 	}
 
 	// Prepare data for the template

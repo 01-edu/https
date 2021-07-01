@@ -8,8 +8,8 @@ cd -P "$(dirname "$0")"
 DOMAIN=${DOMAIN:-dev.01-edu.org}
 
 if test "$(dig +short "$DOMAIN")" = "127.0.0.1"; then
-    mkcert -cert-file     "${DOMAIN}-cert.pem" -key-file     "${DOMAIN}-key.pem"     "${DOMAIN}"
-    mkcert -cert-file "git.${DOMAIN}-cert.pem" -key-file "git.${DOMAIN}-key.pem" "git.${DOMAIN}"
+    mkcert -cert-file "certs/${DOMAIN}-cert.pem"     -key-file "certs/${DOMAIN}-key.pem"     "${DOMAIN}"
+    mkcert -cert-file "certs/git.${DOMAIN}-cert.pem" -key-file "certs/git.${DOMAIN}-key.pem" "git.${DOMAIN}"
 fi
 
 docker build -t https .

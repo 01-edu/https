@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 	"os/exec"
 	"sort"
 	"strings"
@@ -59,14 +60,6 @@ var (
 
 // setCaddyProxies requests Caddy to proxy the domains to the containers
 func setCaddyProxies() {
-	t := time.Now()
-	defer func() {
-		fmt.Println("config loaded in", time.Since(t))
-		for domain, container := range proxies {
-			fmt.Println(" ", domain, "=>", container)
-		}
-	}()
-
 	// Determine if this a development or production domain by looking at the first domains to be proxied
 	// Parse the right configuration template file
 	if !initialized {
@@ -90,7 +83,17 @@ func setCaddyProxies() {
 			tmpl, err = template.ParseFiles("production.tmpl")
 		}
 		expect(nil, err)
+		fmt.Println("template:", tmpl.Name())
 	}
+
+	t := time.Now()
+	defer func() {
+		fmt.Println("config loaded in", time.Since(t), ":")
+		for domain, container := range proxies {
+			fmt.Println(" ", domain, "=>", container)
+		}
+		fmt.Println()
+	}()
 
 	// Prepare data for the template
 	var domains []string
@@ -122,7 +125,11 @@ func setCaddyProxies() {
 func main() {
 	cli, err := client.NewClientWithOpts(client.WithAPIVersionNegotiation())
 	expect(nil, err)
-	expect(nil, exec.Command("caddy", "start").Run())
+	cmd := exec.Command("caddy", "run")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	expect(nil, cmd.Start())
+	time.Sleep(time.Second)
 
 	// Connect to Docker events in order to detect new Caddy services
 	ctx := context.Background()

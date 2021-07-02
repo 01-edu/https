@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -56,6 +57,7 @@ var (
 	initialized bool
 	tmpl        *template.Template
 	httpClient  = http.Client{Timeout: 15 * time.Second}
+	development = flag.Bool("dev", false, "development")
 )
 
 // setCaddyProxies requests Caddy to proxy the domains to the containers
@@ -67,17 +69,16 @@ func setCaddyProxies() {
 			return
 		}
 		initialized = true
-		var development bool
 		for domain := range proxies {
 			ips, err := net.LookupIP(domain)
 			expect(nil, err)
 			if ips[0].IsLoopback() {
-				development = true
+				*development = true
 				break
 			}
 		}
 		var err error
-		if development {
+		if *development {
 			tmpl, err = template.ParseFiles("development.tmpl")
 		} else {
 			tmpl, err = template.ParseFiles("production.tmpl")
@@ -123,6 +124,8 @@ func setCaddyProxies() {
 }
 
 func main() {
+	flag.Parse()
+
 	cli, err := client.NewClientWithOpts(client.WithAPIVersionNegotiation())
 	expect(nil, err)
 	cmd := exec.Command("caddy", "run")

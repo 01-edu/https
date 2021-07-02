@@ -27,4 +27,4 @@ docker run \
     --volume https_data:/data \
     --publish 80:80 \
     --publish 443:443 \
-    https
+    https ${1:-}

@@ -9,7 +9,7 @@ RUN go mod download
 COPY *.go ./
 RUN go build
 
-FROM docker.01-edu.org/caddy:2.3.0-alpine
+FROM docker.01-edu.org/caddy:2.4.6-alpine
 
 RUN apk add --no-cache curl tzdata
 

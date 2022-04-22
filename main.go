@@ -29,9 +29,7 @@ func expect(target, err error) {
 
 // {
 //         "dev.01-edu.org": "all_caddy_1:8080",
-//     "git.dev.01-edu.org": "all_caddy_1:8081",
 //        "test.01-edu.org": "test01-eduorg_caddy_1:8080",
-//    "git.test.01-edu.org": "test01-eduorg_caddy_1:8081",
 // }
 var proxies = map[string]string{}
 
